@@ -134,25 +134,3 @@ OriginalFilename=
 ProductName=
 ProductVersion=1.0.0.0
 Comments=
-[Exception Log]
-EurekaLog Version=7007
-Activate=1
-atFixSafeCallException=1
-atVCL=1
-atWin32=1
-csoDisabledRenderMethods=-2147483648
-DeleteMapAfterCompile=1
-Encrypt Password=""
-idEurekaLog=1
-idEurekaLogDetailed=1
-idMSClassic=1
-idStepsToReproduce=1
-InjectCode=1
-InjectInfo=1
-InjectOptions=1
-loEnableMMDebugMode=1
-loMaxLeaks=143
-loShareMM=1
-ProjectID="{8CE65419-EF33-422D-AA57-FF25058149C6}"
-
-

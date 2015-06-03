@@ -12,7 +12,7 @@ const
   DEST_EGG   = 'desttroyerEgg';
   SPEED_EGG  = 'speedEgg';
 
-type
+type                                                                             
 
   TConvData = record
     count      : integer;
@@ -81,6 +81,12 @@ type
     procedure   updateObject();override;
     procedure   setConv( number : integer );
 
+    procedure   moveRight();
+    procedure   moveLeft();
+
+    procedure   moveUp() ;
+    procedure   moveDown();
+
   end;
 
 
@@ -129,6 +135,9 @@ type
     btnConvRem: TButton;
     btnIncSpeed: TButton;
     Button1: TButton;
+    LivesLbl: TLabeledEdit;
+    newGameBtn: TButton;
+    SpeedIncTimer: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure FormPaint(Sender: TObject);
     procedure FormResize(Sender: TObject);
@@ -142,6 +151,8 @@ type
     procedure Button1Click(Sender: TObject);
     procedure btnConvRemClick(Sender: TObject);
     procedure FormShortCut(var Msg: TWMKey; var Handled: Boolean);
+    procedure newGameBtnClick(Sender: TObject);
+    procedure SpeedIncTimerTimer(Sender: TObject);
   private
     { Private declarations }
     // list of eggs
@@ -155,6 +166,7 @@ type
 
     // score
     m_score        : integer;
+    m_lives        : integer;
 
     // this is wolf
     m_wolf         : TWolf;
@@ -202,12 +214,28 @@ function TForm1.loadBitMap: boolean;
 begin
 
   m_bmpData.basic    := TBitMap.Create;
+
   m_bmpData.current  := TBitMap.Create;
+  
   m_bmpData.chicken  := TBitMap.Create;
+  m_bmpDatA.chicken.TransparentColor := clAqua;
+  m_bmpData.chicken.Transparent := true;
+
   m_bmpData.tunnel   := TBitMap.Create;
+  m_bmpData.tunnel.TransparentColor := clWhite;
+  m_bmpData.tunnel.Transparent := true;
+
   m_bmpData.theme    := TBitMap.Create;
+
   m_bmpData.wolf     := TBitMap.Create;
+  m_bmpData.wolf.TransparentColor := clWhite;
+  m_bmpData.wolf.Transparent := true;
+
+
   m_bmpData.egg      := TBitMap.Create;
+  m_bmpData.egg.TransparentColor := clWhite;
+  m_bmpData.egg.Transparent := true;
+
   m_bmpData.destEgg  := TBitMap.Create;
   m_bmpData.speedEgg := TBitMap.Create;
 
@@ -437,7 +465,6 @@ var i,j : integer;
     renderData : TRenderData;
     cmdList : TStringList;
 begin
-    dolog( inttostr( m_dynamData.Count ));
   try
     for i:=0 to m_dynamData.Count-1 do
     begin
@@ -453,8 +480,10 @@ begin
       begin
 
 
-       cmdList := canvObject.removeAction ;
 
+
+       cmdList := canvObject.removeAction ;
+       
        for j:= 0 to cmdList.Count -1 do
         begin
 
@@ -463,10 +492,24 @@ begin
 
         end;
 
-      end;
+      end
+      else
+        begin
+          dec(self.m_lives);
+          LivesLbl.Text := inttostr(m_lives) ;
+          if(m_lives = 0 ) then
+          begin
+            Generator.Enabled := false;
+            executeCommand('destroy');
+            renderScene;
+            dolog('loose');
+
+          end;
+        end;
 
       canvObject.Free;
       m_dynamData.Remove(canvObject);
+      renderScene;
       drawDynamicData:=true;
       exit;
 
@@ -497,7 +540,6 @@ begin
     end;
 
   except
-    dolog('error on:' + inttostr(i) );
     drawDynamicData := false;
     exit;
   end;
@@ -526,7 +568,7 @@ begin
     exit;
   end;
 
-  self.Canvas.StretchDraw(Rect(0,0,self.Width,self.Height),m_bmpData.current   );
+  self.Canvas.StretchDraw(Rect(0,0,self.Width,self.Height),m_bmpData.current );
 
   renderScene := true;
 
@@ -569,6 +611,7 @@ begin
 
     m_score := m_score + buf;
     lblScore.Text := 'Score: ' + inttostr(m_score);
+    dolog('+'+ inttostr(buf) + ' points');
     executeCommand := true;
     exit;
 
@@ -581,6 +624,7 @@ begin
       canvObj := m_dynamData[i];
     //  canvObj.Free;
       m_dynamData.remove(canvObj);
+      dolog('all eggs destroyed');
     end;
 
       m_dynamData.Count := 1;
@@ -593,6 +637,7 @@ begin
   if( cmd = 'setSpeed') then
   begin
   m_convData.speed := buf;
+  dolog('speed =' + inttostr(m_convData.speed) );
   exit;
   end;
 
@@ -658,6 +703,28 @@ end;
 function TWolf.getRenderData: TRenderData;
 begin
   getRenderData := self.m_renderData;
+end;
+
+procedure TWolf.moveDown;
+begin
+
+end;
+
+procedure TWolf.moveLeft;
+begin
+  if(self.m_currentConv > 0)  then
+  dec(m_CurrentConv);
+end;
+
+procedure TWolf.moveRight;
+begin
+  if(self.m_currentConv < m_convLink^.count )  then
+  inc(m_CurrentConv);
+end;
+
+procedure TWolf.moveUp;
+begin
+
 end;
 
 procedure TWolf.setConv(number: integer);
@@ -775,7 +842,7 @@ end;
 procedure TForm1.GeneratorTimer(Sender: TObject);
 begin
   try
-  addObject( m_eggList[ random(m_eggList.Count)] );
+  addObject( m_eggList[ {random(m_eggList.Count)} 0] );
   except
   end;
 end;
@@ -785,8 +852,8 @@ var i:integer;
   ptr : TCanvasObject;
 begin
 
-  m_bmpData.basic.Free;
-  m_bmpData.current.Free;
+  m_bmpData.basic.Free;   {
+  m_bmpData.current.Free; }
   m_bmpData.chicken.Free;
   m_bmpData.tunnel.Free;
   m_bmpData.theme.Free;
@@ -803,7 +870,7 @@ begin
   end;
   m_dynamData.Free;
 
-  m_eggList.Free;
+  m_eggList.Free;   
 
 
 end;
@@ -845,7 +912,8 @@ procedure TForm1.FormShortCut(var Msg: TWMKey; var Handled: Boolean);
 var k : integer;
 begin
 
- 
+  {dolog( inttostr(msg.Charcode)) ;
+
   try
 
   k := strtoint( chr(msg.CharCode) );
@@ -854,9 +922,35 @@ begin
   exit;
   end;
 
-  m_wolf.setConv(k);
+  m_wolf.setConv(k);}
+
+  case msg.CharCode of
+  39 : m_wolf.moveRight;
+  37 : m_wolf.moveLeft;
+  end;
+  msg.
 
 
+
+end;
+
+procedure TForm1.newGameBtnClick(Sender: TObject);
+begin
+  Generator.Enabled := true;
+  self.m_lives := 5;
+  self.m_score := 0;
+  LivesLbl.Text := inttostr(m_lives);
+
+  m_convData.speed := 1;
+  lblScore.Text := inttostr(0);
+  log.Clear;
+
+
+end;
+
+procedure TForm1.SpeedIncTimerTimer(Sender: TObject);
+begin
+  inc(m_convData.speed);
 end;
 
 end.
