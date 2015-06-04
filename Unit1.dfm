@@ -1,8 +1,8 @@
 object Form1: TForm1
-  Left = 631
-  Top = 5
+  Left = 504
+  Top = 53
   Width = 613
-  Height = 716
+  Height = 684
   Anchors = [akLeft, akBottom]
   Caption = 'Game'
   Color = clBtnFace
@@ -14,20 +14,19 @@ object Form1: TForm1
   OldCreateOrder = False
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  OnKeyPress = FormKeyPress
   OnPaint = FormPaint
   OnResize = FormResize
   OnShortCut = FormShortCut
   DesignSize = (
     597
-    677)
+    645)
   PixelsPerInch = 96
   TextHeight = 13
   object log: TMemo
     Left = 40
-    Top = 472
+    Top = 496
     Width = 521
-    Height = 133
+    Height = 77
     Anchors = [akBottom]
     Enabled = False
     Lines.Strings = (
@@ -36,7 +35,7 @@ object Form1: TForm1
   end
   object lblScore: TLabeledEdit
     Left = 40
-    Top = 620
+    Top = 588
     Width = 121
     Height = 21
     Anchors = [akBottom]
@@ -48,7 +47,7 @@ object Form1: TForm1
   end
   object btnConvAdd: TBitBtn
     Left = 160
-    Top = 620
+    Top = 588
     Width = 75
     Height = 25
     Anchors = [akBottom]
@@ -58,7 +57,7 @@ object Form1: TForm1
   end
   object btnConvRem: TButton
     Left = 160
-    Top = 644
+    Top = 612
     Width = 75
     Height = 25
     Anchors = [akBottom]
@@ -68,7 +67,7 @@ object Form1: TForm1
   end
   object btnIncSpeed: TButton
     Left = 240
-    Top = 616
+    Top = 584
     Width = 75
     Height = 25
     Anchors = [akBottom]
@@ -78,7 +77,7 @@ object Form1: TForm1
   end
   object Button1: TButton
     Left = 240
-    Top = 640
+    Top = 608
     Width = 75
     Height = 25
     Anchors = [akBottom]
@@ -88,7 +87,7 @@ object Form1: TForm1
   end
   object LivesLbl: TLabeledEdit
     Left = 40
-    Top = 644
+    Top = 612
     Width = 121
     Height = 21
     Anchors = [akBottom]
@@ -100,7 +99,7 @@ object Form1: TForm1
   end
   object newGameBtn: TButton
     Left = 320
-    Top = 616
+    Top = 584
     Width = 75
     Height = 25
     Anchors = [akBottom]

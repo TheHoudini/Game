@@ -5,7 +5,7 @@ interface
 {.$define AssumeMultiThreaded}
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, Jpeg ,axCtrls, ComCtrls, Buttons  ;
+  Dialogs, StdCtrls, ExtCtrls, Jpeg ,axCtrls, ComCtrls, Buttons , dbMgr  ;
 
 const
   COMMON_EGG = 'basicEgg';
@@ -29,6 +29,7 @@ type
     tunnel     : TBitMap;
     theme      : TBitMap;
     wolf       : TBitmap;
+    ladder     : TBitmap;
     egg        : TBitMap;
     destEgg    : TBitMap;
     speedEgg   : TBitMap;
@@ -41,6 +42,7 @@ type
     size       :  integer;
     bitmap     : ^TBitMap;
     isRemove   :  boolean;
+    isCanTaken :  boolean;
     conv       :  integer;
   end;
 
@@ -71,6 +73,7 @@ type
     m_renderData   : TRenderData;
     m_convLink     : TConvDataLink;
     m_currentConv  : integer;
+    m_currentRow   : integer;
 
   public
     constructor Create(data : TConvDataLink; bmpData : TbmpDataLink);
@@ -78,8 +81,9 @@ type
 
     function    getRenderData():TRenderData;override;
     function    getCurrentConv():integer;
+    function    getCurrentRow():integer;
     procedure   updateObject();override;
-    procedure   setConv( number : integer );
+    procedure   setConv( column : integer;row :integer );
 
     procedure   moveRight();
     procedure   moveLeft();
@@ -141,7 +145,6 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormPaint(Sender: TObject);
     procedure FormResize(Sender: TObject);
-    procedure FormKeyPress(Sender: TObject; var Key: Char);
     procedure RefreshTimerTimer(Sender: TObject);
     procedure GeneratorTimer(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -168,10 +171,16 @@ type
     m_score        : integer;
     m_lives        : integer;
 
+    //buck up
+    m_key          : integer;
+
     // this is wolf
     m_wolf         : TWolf;
     // objects being rerender all time
     m_dynamData    : TList ;
+
+
+    m_dbMgr : TDBMgr;
 
   public
     { Public declarations }
@@ -226,6 +235,11 @@ begin
   m_bmpData.tunnel.Transparent := true;
 
   m_bmpData.theme    := TBitMap.Create;
+
+  m_bmpData.ladder := TBItmap.Create;
+  m_bmpData.ladder.TransparentColor := clWhite;
+  m_bmpData.ladder.Transparent := true;
+
 
   m_bmpData.wolf     := TBitMap.Create;
   m_bmpData.wolf.TransparentColor := clWhite;
@@ -284,7 +298,12 @@ begin
 
   end;
 
+  if(not getPictureData(m_bmpData.ladder,'./image/ladder.bmp')) then
+  begin
+    loadBitMap := false;
+    exit;
 
+  end;
 
 
   loadBitMap:=true;
@@ -292,7 +311,14 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
+var suc : boolean;
+    deb : string;
 begin
+  m_dbMgr := TDbMgr.Create(suc);
+  if(not suc) then
+  dolog('init error');
+
+
   randomize;
   if(not loadBitMap() )then
     application.Terminate;
@@ -313,7 +339,7 @@ begin
 
   m_wolf := TWolf.Create(@m_convData,@m_bmpData);
   m_dynamData.Add(m_wolf);
-  m_wolf.setConv(1);
+  m_wolf.setConv(1,2);
 
 
 
@@ -371,7 +397,10 @@ begin
     m_bmpData.basic.Canvas.StretchDraw( Rect(i*m_convData.blockSize + i*m_convData.space   , m_convData.blockSize
                                        ,i*m_convData.blockSize + i*m_convData.space + m_convData.blockSize  , m_convData.blockSize*2 ) , m_bmpData.tunnel        );
 
-
+    m_bmpData.basic.Canvas.StretchDraw( Rect(i*m_convData.blockSize + i*m_convData.space   , m_convData.blockSize*2
+                                       ,i*m_convData.blockSize + i*m_convData.space + m_convData.blockSize  , m_convData.blockSize*3 ) , m_bmpData.ladder        );
+    m_bmpData.basic.Canvas.StretchDraw( Rect(i*m_convData.blockSize + i*m_convData.space   , m_convData.blockSize*3
+                                       ,i*m_convData.blockSize + i*m_convData.space + m_convData.blockSize  , m_convData.blockSize*4 ) , m_bmpData.ladder        );
 
   end;
 
@@ -439,61 +468,45 @@ end;
 
 
 
-procedure TForm1.FormKeyPress(Sender: TObject; var Key: Char);
-var k : integer;
-begin
-
-  try
-
-  k := strtoint(key);
-
-  except
-  exit;
-  end;
-
-  m_wolf.setConv(k);
-
-
-
-end;
-
-
-
 function TForm1.drawDynamicData: boolean;
 var i,j : integer;
     canvObject : TCanvasObject;
     renderData : TRenderData;
     cmdList : TStringList;
+    deb :string;
 begin
+
   try
     for i:=0 to m_dynamData.Count-1 do
     begin
 
      canvObject := m_dynamData[i];
-
      renderData :=  canvObject.getRenderData;
 
 
-     if(renderData.isRemove) then
+     if(renderData.isCanTaken) then
      begin
-      if(renderData.conv = m_wolf.getCurrentConv) then
+      if(renderData.conv = m_wolf.getCurrentConv)
+           AND ((renderData.y div m_convData.blockSize) = m_wolf.getCurrentRow ) then
       begin
 
-
-
-
-       cmdList := canvObject.removeAction ;
-       
+       cmdList := canvObject.removeAction;
        for j:= 0 to cmdList.Count -1 do
-        begin
+       begin
+        executeCommand(cmdList[j]);
+       end;
 
-          executeCommand(cmdList[j]);
+       canvObject.Free;
+       m_dynamData.Remove(canvObject);
+       drawDynamicData:=true;
+       exit;
 
 
-        end;
+
 
       end
-      else
+      // if wolf not here
+      else if(renderData.isRemove) then
         begin
           dec(self.m_lives);
           LivesLbl.Text := inttostr(m_lives) ;
@@ -504,14 +517,16 @@ begin
             renderScene;
             dolog('loose');
 
-          end;
-        end;
+            m_dbMgr.processResult(self.m_score,deb);
+            dolog(deb);
 
-      canvObject.Free;
-      m_dynamData.Remove(canvObject);
-      renderScene;
-      drawDynamicData:=true;
-      exit;
+          end;
+
+          m_dynamData.Remove(canvObject);
+          canvObject.Free;
+          drawDynamicData:=true;
+          exit;
+        end;
 
 
 
@@ -624,7 +639,6 @@ begin
       canvObj := m_dynamData[i];
     //  canvObj.Free;
       m_dynamData.remove(canvObj);
-      dolog('all eggs destroyed');
     end;
 
       m_dynamData.Count := 1;
@@ -685,7 +699,7 @@ constructor TWolf.Create(data: TConvDataLink; bmpData: TbmpDataLink);
 begin
   m_convLink := data;
   m_renderData.bitmap := @bmpData^.wolf;
-  setConv(1);
+  setConv(1,2);
   m_renderData.size := 1;
 end;
 
@@ -700,6 +714,11 @@ begin
   getCurrentConv := m_currentConv;
 end;
 
+function TWolf.getCurrentRow: integer;
+begin
+  getCurrentRow := m_currentRow;
+end;
+
 function TWolf.getRenderData: TRenderData;
 begin
   getRenderData := self.m_renderData;
@@ -707,12 +726,14 @@ end;
 
 procedure TWolf.moveDown;
 begin
+  if(m_currentRow > 2) then
+  dec(m_currentRow);
 
 end;
 
 procedure TWolf.moveLeft;
 begin
-  if(self.m_currentConv > 0)  then
+  if(self.m_currentConv > 1)  then
   dec(m_CurrentConv);
 end;
 
@@ -724,27 +745,30 @@ end;
 
 procedure TWolf.moveUp;
 begin
+  if(m_currentRow < 5) then
+    inc(m_currentRow);
 
 end;
 
-procedure TWolf.setConv(number: integer);
+procedure TWolf.setConv(column : integer ; row : integer);
 begin
 
-  if(number > m_convLink^.count) then
-  exit;
+  if(column > m_convLink^.count) then
+    exit;
 
-  dec(number);
+  dec(column);
 
-  m_renderData.x := number * m_convLink^.blockSize + number * m_convLink^.space;
-  m_renderData.y := m_convLink^.blockSize*2;
+  m_renderData.x := column * m_convLink^.blockSize + column * m_convLink^.space;
+  m_renderData.y := m_convLink^.blockSize*row;
 
-  m_currentConv := number + 1;
+  m_currentConv := column + 1;
+  m_currentRow := row;
 
 end;
 
 procedure TWolf.updateObject;
 begin
-  self.setConv(m_currentConv);
+  self.setConv(m_currentConv,m_currentRow);
 end;
 
 procedure TForm1.RefreshTimerTimer(Sender: TObject);
@@ -814,6 +838,9 @@ begin
   m_renderData.y := m_renderData.y  + m_convLink^.speed;
 
   if ( m_renderData.y >= (m_convLink^.blockSize*2) ) then
+    m_renderData.isCanTaken := true;
+
+  if ( m_renderData.y >= (m_convLink^.blockSize*4) ) then
     m_renderData.isRemove := true;
 
 
@@ -852,6 +879,8 @@ var i:integer;
   ptr : TCanvasObject;
 begin
 
+  m_dbMgr.Free;
+  
   m_bmpData.basic.Free;   {
   m_bmpData.current.Free; }
   m_bmpData.chicken.Free;
@@ -912,23 +941,23 @@ procedure TForm1.FormShortCut(var Msg: TWMKey; var Handled: Boolean);
 var k : integer;
 begin
 
-  {dolog( inttostr(msg.Charcode)) ;
 
-  try
-
-  k := strtoint( chr(msg.CharCode) );
-
-  except
-  exit;
+  if(m_key <> msg.CharCode)then
+  begin
+    m_key := msg.CharCode;
+    exit;
   end;
 
-  m_wolf.setConv(k);}
+  m_key := -1;
 
-  case msg.CharCode of
+
+  case msg.CharCode  of
   39 : m_wolf.moveRight;
   37 : m_wolf.moveLeft;
+  40 : m_wolf.moveUp;
+  38 : m_wolf.moveDown;
   end;
-  msg.
+
 
 
 
